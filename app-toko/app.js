@@ -1,97 +1,134 @@
-// 1. Buat fungsi Async (Karena mengambil data butuh waktu menunggu)
 async function ambilDataBarang() {
-    const tbody = document.getElementById('tabel-barang');
     try {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" class="px-6 py-8 text-center text-gray-400">
-                    <div class="flex justify-center items-center space-x-2">
-                        <svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Memuat data...</span>
-                    </div>
-                </td>
-            </tr>
-        `;
-
         // 2. Panggil Pelayan (Fetch) menuju URL API
-        // Gunakan URL folder yang sesuai di Laragon
-        const response = await fetch('http://localhost/Pengki/api-toko/get_barang.php');
+        const response = await fetch('https://pengkirizaldi-webapp1.infinityfreeapp.com/api-toko/get_barang.php');
+        
+        // CEK STATUS RESPONSE
+        if (!response.ok) {
+            const responseText = await response.text();
+            console.error('Server Error:', response.status, responseText);
+            console.error('Koneksi database mungkin gagal. Cek koneksi.php di server production.');
+            return;
+        }
 
         // 3. Bongkar paket (Ubah string JSON jadi Object JS)
         const hasil = await response.json();
-
+        
         if (hasil.status === 'success') {
             let barisHTML = '';
-
-            const formatRupiah = (angka) => {
-                return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-            };
-
-            if (hasil.data.length === 0) {
-                barisHTML = `
-                    <tr>
-                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">Belum ada data barang.</td>
+            
+            // 4. Looping data barang
+            hasil.data.forEach(barang => {
+                barisHTML += `
+                    <tr class="border-b text-center p-2 hover:bg-gray-50">
+                        <td class="py-2">${barang.id}</td>
+                        <td class="py-2">${barang.nama_barang}</td>
+                        <td class="py-2">Rp ${barang.harga}</td>
+                        <td class="py-3">
+                            <div class="flex gap-2 justify-center">
+                                <button onclick="editBarang(${barang.id}, '${barang.nama_barang.replace(/'/g, "\\'")}', ${barang.harga})"
+                                    title="Edit barang ini"
+                                    class="inline-flex items-center gap-1.5 bg-sky-50 hover:bg-sky-500 text-sky-600 hover:text-white border border-sky-300 hover:border-sky-500 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 hover:shadow-md hover:-translate-y-px active:scale-95">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    Edit
+                                </button>
+                                <button onclick="hapusBarang(${barang.id})"
+                                    title="Hapus barang ini"
+                                    class="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-300 hover:border-rose-500 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 hover:shadow-md hover:-translate-y-px active:scale-95">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                        <path d="M10 11v6M14 11v6"/>
+                                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                    </svg>
+                                    Hapus
+                                </button>
+                            </div>
+                        </td>
                     </tr>
                 `;
-            } else {
-                // 4. Looping data barang
-                hasil.data.forEach(barang => {
-                    // Gunakan backtick (`) untuk memasukkan variabel ke HTML
-                    barisHTML += `
-                        <tr class="hover:bg-indigo-50/30 transition-colors duration-200 group">
-                            <td class="px-6 py-4">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                    #${barang.id.toString().padStart(4, '0')}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center">
-                                    <div class="h-10 w-10 flex-shrink-0 bg-gradient-to-br from-indigo-100 to-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold shadow-sm border border-blue-200">
-                                        ${barang.nama_barang.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">${barang.nama_barang}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="text-sm font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 shadow-sm">
-                                    ${formatRupiah(barang.harga)}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-center">
-                                <button class="text-gray-400 hover:text-indigo-600 transition-colors p-2 rounded-lg hover:bg-indigo-50">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                </button>
-                                <button onclick="hapusBarang(${barang.id})" class="text-gray-400 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50 ml-1">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                });
-            }
-
+});
+            
             // 5. Tembakkan ke dalam id="tabel-barang" di index.html
-            tbody.innerHTML = barisHTML;
+            document.getElementById('tabel-barang').innerHTML = barisHTML;
         }
     } catch (error) {
         console.error('Gagal mengambil data:', error);
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" class="px-6 py-8 text-center text-red-500 bg-red-50">
-                    <div class="flex flex-col items-center justify-center">
-                        <svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>Gagal memuat data dari server. Pastikan database dan server aktif.</span>
-                    </div>
-                </td>
-            </tr>
-        `;
     }
 }
+
+// 1. Tangkap Elemen Form
+const formTambah = document.getElementById('form-tambah');
+
+// 2. Beri event 'submit' pada Form tersebut
+formTambah.addEventListener('submit', async function(event) {
+    
+    // PENTING: Mencegah halaman berkedip/reload!
+    event.preventDefault(); 
+    
+    // 3. Tangkap nilai yang diketik user
+    const idBarang   = document.getElementById('input-id').value;   // Kosong = mode Tambah
+    const namaBarang = document.getElementById('input-nama').value;
+    const hargaBarang = document.getElementById('input-harga').value;
+
+    // 4. Cek apakah sedang dalam mode EDIT atau TAMBAH
+    const isEditMode = idBarang !== '';
+
+    const dataKirim = {
+        nama_barang: namaBarang,
+        harga: hargaBarang
+    };
+    if (isEditMode) {
+        dataKirim.id = idBarang; // Tambahkan ID hanya saat Edit
+    }
+
+    // 5. Tentukan URL & Method sesuai mode
+    const url    = isEditMode
+        ? 'https://pengkirizaldi-webapp1.infinityfreeapp.com/api-toko/edit_barang.php'
+        : 'https://pengkirizaldi-webapp1.infinityfreeapp.com/api-toko/tambah_barang.php';
+    const method = isEditMode ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': myToken  // Kirim token sebagai tiket akses
+            },
+            body: JSON.stringify(dataKirim)
+        });
+
+        // CEK STATUS RESPONSE DARI SERVER
+        if (!response.ok) {
+            const responseText = await response.text();
+            console.error('Server Error:', response.status, responseText);
+            alert(`Error ${response.status}: Cek browser console untuk detail error.\nPastikan koneksi database di server bekerja.`);
+            return;
+        }
+
+        const hasil = await response.json();
+
+        if (hasil.status === 'success') {
+            // Kembalikan form ke mode Tambah
+            batalEdit();
+            
+            // Beri notifikasi ke user
+            alert('Sukses: ' + hasil.pesan);
+            
+            // Refresh tabel
+            ambilDataBarang(); 
+        } else {
+            alert('Gagal: ' + hasil.pesan);
+        }
+
+    } catch (error) {
+        console.error('Terjadi kesalahan koneksi:', error);
+        alert('Gagal: ' + error.message + '\n\nPastikan:\n1. XAMPP/Laragon menyala\n2. Koneksi database bekerja\n3. Check browser console untuk detail error');
+    }
+});
 
 // 6. Jalankan fungsi saat file JS ini di-load
 ambilDataBarang();
@@ -109,57 +146,6 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// 1. Tangkap Elemen Form
-const formTambah = document.getElementById('form-tambah');
-
-// 2. Beri event 'submit' pada Form tersebut
-formTambah.addEventListener('submit', async function(event) {
-    
-    // PENTING: Mencegah halaman berkedip/reload!
-    event.preventDefault(); 
-    
-    // 3. Tangkap nilai yang diketik user
-    const namaBarang = document.getElementById('input-nama').value;
-    const hargaBarang = document.getElementById('input-harga').value;
-
-    // 4. Siapkan kardus Data Object (akan di-stringify nanti)
-    const dataKirim = {
-        nama_barang: namaBarang,
-        harga: hargaBarang
-    };
-
-    try {
-        // 5. Panggil kurir Fetch API
-        const response = await fetch('http://localhost/Pengki/api-toko/tambah_barang.php', {
-            method: 'POST', // Beri tahu niatnya adalah menambah data
-            headers: {
-                'Content-Type': 'application/json' // Label bahwa isi paket adalah JSON
-            },
-            body: JSON.stringify(dataKirim) // Ubah Object JS menjadi String JSON
-        });
-
-        const hasil = await response.json();
-
-        // 6. Cek status balasan dari PHP koki
-        if (hasil.status === 'success') {
-            // Bersihkan form inputan
-            formTambah.reset(); 
-            
-            // Beri notifikasi ke user
-            alert('Sukses: ' + hasil.pesan);
-            
-            // AJAIB: Panggil ulang fungsi Get Tabel dari Pertemuan 3!
-            // Agar baris tabel otomatis bertambah tanpa reload halaman
-            ambilDataBarang(); 
-        } else {
-            alert('Gagal: ' + hasil.pesan);
-        }
-
-    } catch (error) {
-        console.error('Terjadi kesalahan koneksi:', error);
-        alert('Gagal menghubungi server API. Pastikan XAMPP/Laragon menyala.');
-    }
-});
 
 // Fungsi Hapus Data
 async function hapusBarang(id_target) {
@@ -172,13 +158,22 @@ async function hapusBarang(id_target) {
     if (yakin) {
         try {
             // 2. Fetch API Koki
-            const response = await fetch('http://localhost/Pengki/api-toko/hapus_barang.php', {
-                method: 'DELETE', // Method resmi REST API untuk hapus
+            const response = await fetch('https://pengkirizaldi-webapp1.infinityfreeapp.com/api-toko/hapus_barang.php', {
+                method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': myToken  // Kirim token sebagai tiket akses
                 },
-                body: JSON.stringify({ id: id_target }) // Kirim ID ke Backend
+                body: JSON.stringify({ id: id_target })
             });
+
+            // CEK STATUS RESPONSE
+            if (!response.ok) {
+                const responseText = await response.text();
+                console.error('Server Error:', response.status, responseText);
+                alert(`Error ${response.status}: Cek browser console untuk detail error.`);
+                return;
+            }
 
             const hasil = await response.json();
 
@@ -192,7 +187,113 @@ async function hapusBarang(id_target) {
 
         } catch (error) {
             console.error('Terjadi kesalahan:', error);
-            alert('Gagal terhubung ke server untuk menghapus data.');
+            alert('Gagal: ' + error.message);
         }
     }
+}
+
+
+// =========================================
+// Fungsi Edit Data
+// =========================================
+
+/**
+ * Mengisi form dengan data dari baris tabel yang diklik tombol Edit-nya.
+ * @param {number} id - ID barang
+ * @param {string} nama - Nama barang
+ * @param {number} harga - Harga barang
+ */
+function editBarang(id, nama, harga) {
+    // 1. Isi hidden input ID (penanda mode Edit)
+    document.getElementById('input-id').value = id;
+
+    // 2. Isi field form dengan data dari tabel
+    document.getElementById('input-nama').value  = nama;
+    document.getElementById('input-harga').value = harga;
+
+    // 3. Ubah tampilan judul form
+    const judulForm = document.getElementById('judul-form');
+    judulForm.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-500">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        Edit Barang <span class="ml-1 text-sm font-normal text-sky-600">(ID: ${id})</span>
+    `;
+
+    // 4. Ubah tombol Submit menjadi biru + ikon Update (mode Edit)
+    const btnSubmit = document.getElementById('btn-submit');
+    btnSubmit.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        Update
+    `;
+    btnSubmit.className = 'inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold py-2 px-6 rounded-lg transition-all duration-200 hover:shadow-lg h-[42px]';
+
+    // 5. Tampilkan tombol Batal
+    document.getElementById('btn-batal').classList.remove('hidden');
+
+    // 6. Scroll halus ke atas menuju form
+    document.getElementById('form-tambah').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // 7. Fokus ke field Nama Barang
+    document.getElementById('input-nama').focus();
+}
+
+/**
+ * Mengembalikan form ke mode Tambah (membatalkan mode Edit).
+ */
+function batalEdit() {
+    // Reset hidden ID
+    document.getElementById('input-id').value = '';
+
+    // Kosongkan field form
+    document.getElementById('form-tambah').reset();
+
+    // Kembalikan judul form
+    document.getElementById('judul-form').innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-amber-500">
+            <path d="M5 12h14"/><path d="M12 5v14"/>
+        </svg>
+        Tambah Barang Baru
+    `;
+
+    // Kembalikan tombol Submit ke warna amber (mode Tambah)
+    const btnSubmit = document.getElementById('btn-submit');
+    btnSubmit.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Simpan
+    `;
+    btnSubmit.className = 'inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold py-2 px-6 rounded-lg transition-all duration-200 hover:shadow-lg h-[42px]';
+
+    // Sembunyikan tombol Batal
+    document.getElementById('btn-batal').classList.add('hidden');
+}
+
+// =========================================
+// Autentikasi & Token
+// =========================================
+
+// Ambil token yang tersimpan di browser (hasil login)
+const myToken = localStorage.getItem('token_toko');
+
+// Guard: jika tidak ada token, paksa arahkan ke halaman login
+if (!myToken) {
+    alert('Anda harus login terlebih dahulu!');
+    window.location.href = 'login.html';
+}
+
+/**
+ * Fungsi Logout — hapus token dan kembali ke halaman login.
+ * Panggil fungsi ini dari tombol Logout di index.html:
+ * <button onclick="logout()">Logout</button>
+ */
+function logout() {
+    localStorage.removeItem('token_toko');
+    window.location.href = 'login.html';
 }
